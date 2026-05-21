@@ -1,8 +1,10 @@
-// UYARI: Eski API anahtarını silip buraya YENİ oluşturduğun anahtarı yapıştır!
-const API_KEY = 'AIzaSyAf_y9QjJnlIKrcPfzYQmj5t6fYhNsJqTY'; 
+// DİKKAT: BURAYA YEPYENİ BİR API ANAHTARI KOYMALISIN! 
+// Eski anahtarın Google tarafından güvenlik nedeniyle engellenmiş olabilir.
+const API_KEY = 'AIzaSyB-8sASTeAsAeak3BMC_dOXa9I2VBDbhfA'; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Dinamik alan ekleme
+    // --- 1. DİNAMİK ALAN EKLEME İŞLEMLERİ ---
+    
     document.getElementById('deneyimEkle').addEventListener('click', () => {
         const div = document.createElement('div');
         div.className = 'deneyim-grup';
@@ -11,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" class="pozisyon" placeholder="Pozisyon">
             <input type="text" class="tarih" placeholder="Tarih">
             <textarea class="aciklama" placeholder="Kısa açıklama"></textarea>
+            <hr>
         `;
         document.getElementById('deneyimler').appendChild(div);
     });
@@ -31,167 +34,201 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sertifikalar').appendChild(input);
     });
 
-    // Form gönderimi
+    // --- 2. FORM GÖNDERİMİ VE API İŞLEMLERİ ---
+    
     document.getElementById('cvForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Buton durumunu ayarla
         const btn = document.getElementById('generateBtn');
         const btnText = document.getElementById('btnText');
         const btnLoader = document.getElementById('btnLoader');
+        
         btn.disabled = true;
         btnText.classList.add('hidden');
         btnLoader.classList.remove('hidden');
 
         try {
-            // Kullanıcı verilerini topla
+            // Verileri Topla
             const veri = {
-                ad: document.getElementById('ad').value,
-                soyad: document.getElementById('soyad').value,
-                email: document.getElementById('email').value,
-                telefon: document.getElementById('telefon').value,
-                adres: document.getElementById('adres').value,
-                tc: document.getElementById('tc').value,
-                okul: document.getElementById('okul').value,
-                bolum: document.getElementById('bolum').value,
-                mezuniyetYili: document.getElementById('mezuniyetYili').value,
-                ekAciklama: document.getElementById('ekAciklama').value,
+                ad: document.getElementById('ad').value.trim(),
+                soyad: document.getElementById('soyad').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                telefon: document.getElementById('telefon').value.trim(),
+                adres: document.getElementById('adres').value.trim(),
+                tc: document.getElementById('tc').value.trim(),
+                okul: document.getElementById('okul').value.trim(),
+                bolum: document.getElementById('bolum').value.trim(),
+                mezuniyetYili: document.getElementById('mezuniyetYili').value.trim(),
+                ekAciklama: document.getElementById('ekAciklama').value.trim(),
                 deneyimler: [],
                 yetenekler: [],
                 sertifikalar: []
             };
 
             document.querySelectorAll('.deneyim-grup').forEach(grup => {
-                const sirket = grup.querySelector('.sirket')?.value;
+                const sirket = grup.querySelector('.sirket')?.value.trim();
                 if (sirket) {
                     veri.deneyimler.push({
                         sirket: sirket,
-                        pozisyon: grup.querySelector('.pozisyon')?.value || '',
-                        tarih: grup.querySelector('.tarih')?.value || '',
-                        aciklama: grup.querySelector('.aciklama')?.value || ''
+                        pozisyon: grup.querySelector('.pozisyon')?.value.trim() || '',
+                        tarih: grup.querySelector('.tarih')?.value.trim() || '',
+                        aciklama: grup.querySelector('.aciklama')?.value.trim() || ''
                     });
                 }
             });
 
             document.querySelectorAll('.yetenek').forEach(input => {
-                if (input.value) veri.yetenekler.push(input.value);
+                if (input.value.trim()) veri.yetenekler.push(input.value.trim());
             });
 
             document.querySelectorAll('.sertifika').forEach(input => {
-                if (input.value) veri.sertifikalar.push(input.value);
+                if (input.value.trim()) veri.sertifikalar.push(input.value.trim());
             });
 
+            // Fotoğraf İşlemi
             const fotoInput = document.getElementById('fotograf');
             let fotoBase64 = '';
             if (fotoInput.files && fotoInput.files[0]) {
                 fotoBase64 = await toBase64(fotoInput.files[0]);
             }
 
-            // Yapay zekadan JSON formatında çıktı vermesini kesinleştiriyoruz
+            // --- 3. API İSTEĞİ HAZIRLAMA ---
+            
             const prompt = `
-            You are an expert CV writer. Analyze the following information and create a professional, modern CV.
-            Enhance the "ekAciklama" into a compelling professional summary (max 100 words). Rewrite each work experience description to be impactful using action verbs and quantifiable achievements where possible.
+            Bir uzman CV yazarı olarak aşağıdaki verileri analiz et ve profesyonel, modern bir CV içeriği oluştur.
+            "ekAciklama" kısmını etkileyici bir profesyonel özete dönüştür (maksimum 100 kelime). 
+            İş deneyimi açıklamalarını eylem fiilleri kullanarak daha etkili hale getir.
             
-            Information:
-            Name: ${veri.ad} ${veri.soyad}
-            Email: ${veri.email}
-            Phone: ${veri.telefon}
-            Address: ${veri.adres}
+            Gelen Veriler:
+            İsim: ${veri.ad} ${veri.soyad}
+            E-posta: ${veri.email}
+            Telefon: ${veri.telefon}
+            Adres: ${veri.adres}
             TC: ${veri.tc}
-            Education: ${veri.okul}, ${veri.bolum}, Graduation: ${veri.mezuniyetYili}
-            Experiences: ${JSON.stringify(veri.deneyimler)}
-            Skills: ${veri.yetenekler.join(', ')}
-            Certifications: ${veri.sertifikalar.join(', ')}
-            Additional Info: "${veri.ekAciklama}"
+            Eğitim: ${veri.okul}, ${veri.bolum}, Mezuniyet: ${veri.mezuniyetYili}
+            Deneyimler: ${JSON.stringify(veri.deneyimler)}
+            Yetenekler: ${veri.yetenekler.join(', ')}
+            Sertifikalar: ${veri.sertifikalar.join(', ')}
+            Ek Açıklama: "${veri.ekAciklama}"
             
-            Return ONLY a valid JSON object with the following structure:
+            SADECE VE SADECE aşağıdaki yapıda geçerli bir JSON objesi döndür. Başka hiçbir metin veya markdown (```json gibi) ekleme:
             {
-              "summary": "enhanced summary text",
+              "summary": "geliştirilmiş profesyonel özet metni",
               "experiences": [
-                { "sirket": "...", "pozisyon": "...", "tarih": "...", "enhancedDescription": "..." }
+                { "sirket": "şirket adı", "pozisyon": "pozisyon adı", "tarih": "tarih", "enhancedDescription": "geliştirilmiş deneyim açıklaması" }
               ],
-              "skills": ["skill1", "skill2"],
-              "certifications": ["cert1"]
+              "skills": ["yetenek 1", "yetenek 2"],
+              "certifications": ["sertifika 1"]
             }
             `;
 
-            // Gemini API Çağrısı (Model ismini güvenceye aldık)
+            // En stabil model: gemini-1.5-flash
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
-                    // API'yi doğrudan JSON döndürmeye zorluyoruz
                     generationConfig: {
-                        responseMimeType: "application/json",
+                        responseMimeType: "application/json" // Çıktıyı kesinlikle JSON olmaya zorlar
                     }
                 })
             });
 
-            // API'den dönen hatayı detaylıca konsola yazdırıyoruz
+            // Hata Kontrolü
             if (!response.ok) {
                 const errorData = await response.json();
-                console.error("API Detaylı Hata:", errorData);
-                throw new Error(`API Hatası (${response.status}): ${errorData.error?.message || 'Bilinmeyen hata oluştu.'}`);
+                console.error("API Hatası Detayı:", errorData);
+                throw new Error(`API Hatası (${response.status}): ${errorData.error?.message || 'Bilinmeyen API Hatası'}`);
             }
 
-            const data = await response.json();
-            const aiText = data.candidates[0].content.parts[0].text;
+            const responseData = await response.json();
+            const aiText = responseData.candidates[0].content.parts[0].text;
             
-            // Artık regex kullanmamıza gerek yok, API direkt temiz JSON veriyor
+            // JSON verisini parse et
             const cvData = JSON.parse(aiText);
 
-            // CV Önizleme HTML'i oluştur
+            // --- 4. CV ÖNİZLEME OLUŞTURMA ---
+            
             const previewDiv = document.getElementById('cvPreview');
             let fotoHtml = '';
             if (fotoBase64) {
-                fotoHtml = `<img src="${fotoBase64}" style="width:100px; height:100px; object-fit:cover; border-radius:50%; margin-bottom:10px;">`;
+                fotoHtml = `<img src="${fotoBase64}" style="width:120px; height:120px; object-fit:cover; border-radius:50%; margin-bottom:15px; border: 3px solid #0072ff;">`;
             }
             
             let deneyimHtml = '';
-            cvData.experiences.forEach(exp => {
-                deneyimHtml += `
-                <div style="margin-bottom:10px;">
-                    <strong>${exp.sirket}</strong> - ${exp.pozisyon} (${exp.tarih})<br>
-                    <em>${exp.enhancedDescription}</em>
-                </div>`;
-            });
+            if(cvData.experiences && cvData.experiences.length > 0) {
+                cvData.experiences.forEach(exp => {
+                    deneyimHtml += `
+                    <div style="margin-bottom:15px; border-left: 2px solid #0072ff; padding-left: 10px;">
+                        <div style="font-weight:bold; font-size: 1.1em;">${exp.sirket}</div>
+                        <div style="color: #555; margin-bottom: 5px;">${exp.pozisyon} | <em>${exp.tarih}</em></div>
+                        <p style="margin:0; font-size: 0.95em;">${exp.enhancedDescription}</p>
+                    </div>`;
+                });
+            } else {
+                deneyimHtml = '<p>Deneyim bilgisi girilmedi.</p>';
+            }
 
             previewDiv.innerHTML = `
-                <div style="font-family:Arial,sans-serif; padding:20px; max-width:700px; margin:auto; background:#fff; color:#333;">
-                    <div style="text-align:center;">
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding:40px; max-width:800px; margin:auto; background:#fff; color:#333; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                    <div style="text-align:center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px;">
                         ${fotoHtml}
-                        <h1 style="color:#2c3e50;">${veri.ad} ${veri.soyad}</h1>
-                        <p>${veri.email} | ${veri.telefon} | ${veri.adres}</p>
-                        ${veri.tc ? `<p>TC: ${veri.tc}</p>` : ''}
+                        <h1 style="color:#2c3e50; margin: 0 0 10px 0; font-size: 2.5em; text-transform: uppercase; letter-spacing: 1px;">${veri.ad} ${veri.soyad}</h1>
+                        <p style="margin: 5px 0; color: #666; font-size: 1.1em;">
+                            ${veri.email} | ${veri.telefon}<br>
+                            ${veri.adres}
+                        </p>
+                        ${veri.tc ? `<p style="margin: 5px 0; font-size: 0.9em; color: #999;">TC: ${veri.tc}</p>` : ''}
                     </div>
-                    <hr>
-                    <h2 style="color:#0072ff;">Profesyonel Özet</h2>
-                    <p>${cvData.summary}</p>
-                    <h2 style="color:#0072ff;">Deneyim</h2>
+                    
+                    <h2 style="color:#0072ff; border-bottom: 1px solid #0072ff; padding-bottom: 5px; margin-top: 25px;">Profesyonel Özet</h2>
+                    <p style="line-height: 1.6;">${cvData.summary}</p>
+                    
+                    <h2 style="color:#0072ff; border-bottom: 1px solid #0072ff; padding-bottom: 5px; margin-top: 25px;">Eğitim</h2>
+                    <p style="font-size: 1.1em;"><strong>${veri.okul}</strong></p>
+                    <p style="margin-top: -10px; color: #555;">${veri.bolum} (Mezuniyet: ${veri.mezuniyetYili})</p>
+                    
+                    <h2 style="color:#0072ff; border-bottom: 1px solid #0072ff; padding-bottom: 5px; margin-top: 25px;">İş Deneyimi</h2>
                     ${deneyimHtml}
-                    <h2 style="color:#0072ff;">Eğitim</h2>
-                    <p><strong>${veri.okul}</strong>, ${veri.bolum} (${veri.mezuniyetYili})</p>
-                    <h2 style="color:#0072ff;">Yetenekler</h2>
-                    <p>${cvData.skills.join(' • ')}</p>
-                    <h2 style="color:#0072ff;">Sertifikalar</h2>
-                    <p>${cvData.certifications.join(' • ') || '—'}</p>
+                    
+                    <h2 style="color:#0072ff; border-bottom: 1px solid #0072ff; padding-bottom: 5px; margin-top: 25px;">Yetenekler</h2>
+                    <p style="line-height: 1.6;">
+                        ${cvData.skills.map(skill => `<span style="display:inline-block; background:#f0f4f8; padding:5px 10px; margin: 2px 5px 5px 0; border-radius: 4px; color:#2c3e50;">${skill}</span>`).join('')}
+                    </p>
+                    
+                    <h2 style="color:#0072ff; border-bottom: 1px solid #0072ff; padding-bottom: 5px; margin-top: 25px;">Sertifikalar</h2>
+                    <ul style="padding-left: 20px; line-height: 1.6;">
+                        ${cvData.certifications.length > 0 ? cvData.certifications.map(cert => `<li>${cert}</li>`).join('') : '<li>Belirtilmedi</li>'}
+                    </ul>
                 </div>
             `;
 
-            // PDF olarak kaydet
+            // --- 5. PDF OLARAK KAYDETME ---
             const opt = {
-                margin: [10, 10],
-                filename: `${veri.ad}_${veri.soyad}_CV.pdf`,
+                margin: [0, 0],
+                filename: `${veri.ad.replace(/\s+/g, '')}_${veri.soyad.replace(/\s+/g, '')}_CV.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+                html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-            html2pdf().set(opt).from(previewDiv).save();
+            
+            // html2pdf kütüphanesinin yüklü olduğundan emin ol
+            if (typeof html2pdf !== 'undefined') {
+                html2pdf().set(opt).from(previewDiv).save();
+            } else {
+                alert("PDF oluşturucu kütüphane (html2pdf) yüklenmemiş. Lütfen index.html dosyanı kontrol et.");
+            }
 
         } catch (error) {
-            alert('Bir hata oluştu. Lütfen geliştirici konsolunu (F12) kontrol et.\nHata Detayı: ' + error.message);
-            console.error(error);
+            console.error("İşlem sırasında tam hata:", error);
+            alert(`Bir hata oluştu!\n\nLütfen API anahtarının yenilendiğinden emin ol.\nDetay: ${error.message}`);
         } finally {
+            // Butonu eski haline getir
             btn.disabled = false;
             btnText.classList.remove('hidden');
             btnLoader.classList.add('hidden');
@@ -199,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Yardımcı Fonksiyon: Dosyayı Base64'e çevirir
 function toBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
